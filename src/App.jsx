@@ -32,8 +32,9 @@ function App() {
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-      justifyContent: 'center',
-      backgroundColor: '#f8fafc'
+      justifyContent: 'space-between',
+      backgroundColor: '#f8fafc',
+      padding: '2rem 0'
     }}>
       <div style={{ 
         maxWidth: '500px',
@@ -69,7 +70,7 @@ function App() {
               value={address}
               onChange={(e) => setAddress(e.target.value)}
               style={{
-                width: '100%',
+                width: '95%',
                 padding: '0.75rem',
                 border: '1px solid #ddd',
                 borderRadius: '4px',
@@ -174,46 +175,48 @@ function App() {
             )}
           </div>
         )}
-
-        <div style={{
-          marginTop: '2rem',
-          textAlign: 'center',
-          color: '#666',
-          fontSize: '0.875rem'
-        }}>
-          Made by{' '}
-          <a 
-            href="https://t.me/CYpTo_HaCkEr" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            style={{
-              color: '#4f46e5',
-              textDecoration: 'none'
-            }}
-          >
-            Shadow
-          </a>
-        </div>
-
-        <style>
-          {`
-            input:focus {
-              outline: none;
-              border-color: #4f46e5;
-            }
-            button:hover:not(:disabled) {
-              background-color: #4338ca;
-            }
-            button:disabled {
-              opacity: 0.7;
-              cursor: not-allowed;
-            }
-            a:hover {
-              text-decoration: underline;
-            }
-          `}
-        </style>
       </div>
+
+      <div style={{
+        textAlign: 'center',
+        color: '#666',
+        fontSize: '0.875rem',
+        marginTop: '2rem',
+        padding: '1rem',
+        width: '100%'
+      }}>
+        Made by{' '}
+        <a 
+          href="https://t.me/CYpTo_HaCkEr" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          style={{
+            color: '#4f46e5',
+            textDecoration: 'none'
+          }}
+        >
+          Shadow
+        </a>
+      </div>
+
+      <style>
+        {`
+          input:focus {
+            outline: none;
+            border-color: #4f46e5;
+          }
+          button:hover:not(:disabled) {
+            background-color: #4338ca;
+          }
+          button:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+          }
+          a:hover {
+            text-decoration: underline;
+          }
+        `}
+      </style>
     </div>
   )
 }
