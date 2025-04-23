@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { checkAirdropEligibility } from './utils/contract'
 
 function App() {
@@ -6,6 +6,13 @@ function App() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [error, setError] = useState(null)
+  const [isDarkMode, setIsDarkMode] = useState(false)
+
+  useEffect(() => {
+    // Check system preference for dark mode
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    setIsDarkMode(prefersDark)
+  }, [])
 
   const handleCheckAirdrop = async () => {
     if (!address) {
@@ -25,6 +32,43 @@ function App() {
     }
   }
 
+  const toggleTheme = () => {
+    setIsDarkMode(!isDarkMode)
+  }
+
+  const themeStyles = {
+    light: {
+      background: '#f8fafc',
+      text: '#333',
+      cardBg: 'white',
+      inputBg: '#f8fafc',
+      border: '#ddd',
+      secondaryText: '#666',
+      errorBg: '#fee2e2',
+      successBg: '#f0fdf4',
+      link: '#4f46e5',
+      button: '#4f46e5',
+      buttonHover: '#4338ca',
+      shadow: '0 2px 4px rgba(0,0,0,0.1)'
+    },
+    dark: {
+      background: '#000000',
+      text: '#ffffff',
+      cardBg: '#111111',
+      inputBg: '#000000',
+      border: '#333333',
+      secondaryText: '#a0a0a0',
+      errorBg: '#1a0000',
+      successBg: '#001a00',
+      link: '#818cf8',
+      button: '#818cf8',
+      buttonHover: '#6366f1',
+      shadow: '0 2px 4px rgba(0,0,0,0.5)'
+    }
+  }
+
+  const currentTheme = isDarkMode ? themeStyles.dark : themeStyles.light
+
   return (
     <div style={{ 
       minHeight: '100vh',
@@ -33,33 +77,54 @@ function App() {
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'space-between',
-      backgroundColor: '#f8fafc',
-      padding: '2rem 0'
+      backgroundColor: currentTheme.background,
+      padding: '2rem 0',
+      color: currentTheme.text,
+      transition: 'all 0.3s ease'
     }}>
       <div style={{ 
         maxWidth: '500px',
         width: '100%',
         padding: '0 1rem'
       }}>
-        <h1 style={{ 
-          textAlign: 'center',
-          marginBottom: '2rem',
-          color: '#333'
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '2rem'
         }}>
-          Zora Airdrop Checker
-        </h1>
+          <h1 style={{ 
+            textAlign: 'center',
+            color: currentTheme.text,
+            margin: 0
+          }}>
+            Zora Airdrop Checker
+          </h1>
+          <button
+            onClick={toggleTheme}
+            style={{
+              padding: '0.5rem',
+              backgroundColor: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              color: currentTheme.text
+            }}
+          >
+            {isDarkMode ? '☀️' : '🌙'}
+          </button>
+        </div>
 
         <div style={{ 
-          backgroundColor: 'white',
+          backgroundColor: currentTheme.cardBg,
           padding: '1.5rem',
           borderRadius: '8px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+          boxShadow: currentTheme.shadow
         }}>
           <div style={{ marginBottom: '1rem' }}>
             <label style={{
               display: 'block',
               marginBottom: '0.5rem',
-              color: '#666',
+              color: currentTheme.secondaryText,
               textAlign: 'center'
             }}>
               Ethereum Address
@@ -72,10 +137,12 @@ function App() {
               style={{
                 width: '95%',
                 padding: '0.75rem',
-                border: '1px solid #ddd',
+                border: `1px solid ${currentTheme.border}`,
                 borderRadius: '4px',
                 fontSize: '1rem',
-                textAlign: 'center'
+                textAlign: 'center',
+                backgroundColor: currentTheme.inputBg,
+                color: currentTheme.text
               }}
             />
           </div>
@@ -86,7 +153,7 @@ function App() {
             style={{
               width: '100%',
               padding: '0.75rem',
-              backgroundColor: '#4f46e5',
+              backgroundColor: currentTheme.button,
               color: 'white',
               border: 'none',
               borderRadius: '4px',
@@ -101,7 +168,7 @@ function App() {
             <div style={{
               marginTop: '1rem',
               padding: '0.75rem',
-              backgroundColor: '#fee2e2',
+              backgroundColor: currentTheme.errorBg,
               color: '#dc2626',
               borderRadius: '4px',
               fontSize: '0.875rem',
@@ -115,10 +182,10 @@ function App() {
         {result && (
           <div style={{ 
             marginTop: '1.5rem',
-            backgroundColor: 'white',
+            backgroundColor: currentTheme.cardBg,
             padding: '1.5rem',
             borderRadius: '8px',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            boxShadow: currentTheme.shadow
           }}>
             <h2 style={{ 
               textAlign: 'center',
@@ -137,11 +204,11 @@ function App() {
                   <div style={{ 
                     fontSize: '1.5rem',
                     fontWeight: 'bold',
-                    color: '#4f46e5'
+                    color: currentTheme.button
                   }}>
                     {result.amount}
                   </div>
-                  <div style={{ color: '#666' }}>
+                  <div style={{ color: currentTheme.secondaryText }}>
                     {result.token}
                   </div>
                 </div>
@@ -153,7 +220,7 @@ function App() {
                 }}>
                   <div style={{
                     padding: '0.75rem',
-                    backgroundColor: result.claimed ? '#fee2e2' : '#f0fdf4',
+                    backgroundColor: result.claimed ? currentTheme.errorBg : currentTheme.successBg,
                     borderRadius: '4px',
                     color: result.claimed ? '#dc2626' : '#16a34a',
                     textAlign: 'center'
@@ -163,7 +230,7 @@ function App() {
 
                   <div style={{
                     padding: '0.75rem',
-                    backgroundColor: result.claimOpen ? '#f0fdf4' : '#fee2e2',
+                    backgroundColor: result.claimOpen ? currentTheme.successBg : currentTheme.errorBg,
                     borderRadius: '4px',
                     color: result.claimOpen ? '#16a34a' : '#dc2626',
                     textAlign: 'center'
@@ -179,7 +246,7 @@ function App() {
 
       <div style={{
         textAlign: 'center',
-        color: '#666',
+        color: currentTheme.secondaryText,
         fontSize: '0.875rem',
         marginTop: '2rem',
         padding: '1rem',
@@ -191,7 +258,7 @@ function App() {
           target="_blank" 
           rel="noopener noreferrer"
           style={{
-            color: '#4f46e5',
+            color: currentTheme.link,
             textDecoration: 'none'
           }}
         >
@@ -203,10 +270,10 @@ function App() {
         {`
           input:focus {
             outline: none;
-            border-color: #4f46e5;
+            border-color: ${currentTheme.button};
           }
           button:hover:not(:disabled) {
-            background-color: #4338ca;
+            background-color: ${currentTheme.buttonHover};
           }
           button:disabled {
             opacity: 0.7;
