@@ -9,7 +9,7 @@ const ZORA_AIRDROP_ADDRESS = "0x0000000002ba96C69b95E32CAAB8fc38bAB8B3F8"
 export const checkAirdropEligibility = async (address) => {
   try {
     // Connect to Ethereum network
-    const provider = new ethers.JsonRpcProvider("https://mainnet.base.org")
+    const provider = new ethers.JsonRpcProvider("https://base-rpc.publicnode.com")
     
     // Create contract instance
     const contract = new ethers.Contract(

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { checkAirdropEligibility } from './utils/contract'
 import { ethers } from 'ethers'
+import MultiWalletChecker from './components/MultiWalletChecker'
 import './App.css'
 
 function App() {
@@ -11,6 +12,7 @@ function App() {
   const [walletConnected, setWalletConnected] = useState(false)
   const [walletAddress, setWalletAddress] = useState('')
   const [isDarkMode, setIsDarkMode] = useState(false)
+  const [currentPage, setCurrentPage] = useState('single') // 'single' or 'multi'
 
   const connectWallet = async () => {
     try {
@@ -106,7 +108,11 @@ function App() {
         }
       }
     } catch (err) {
-      setError('Failed to claim airdrop: ' + err.message);
+      if (err.code === 'ACTION_REJECTED' || err.message?.includes('user denied')) {
+        setError('Transaction was rejected. Please try again if you want to claim the airdrop.');
+      } else {
+        setError('Failed to claim airdrop: ' + err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -132,8 +138,8 @@ function App() {
   }
 
   const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode)
-    document.body.classList.toggle('dark-mode')
+    setIsDarkMode(!isDarkMode);
+    document.body.classList.toggle('light-mode');
   }
 
   const themeStyles = {
@@ -169,16 +175,14 @@ function App() {
 
   const currentTheme = isDarkMode ? themeStyles.dark : themeStyles.light
 
-  return (
-    <div className={`app-container ${isDarkMode ? 'dark-mode' : ''}`}>
-      <div className="theme-toggle">
-        <button onClick={toggleTheme}>
-          {isDarkMode ? '🌞' : '🌙'}
-        </button>
-      </div>
-      
-      <div className="content">
-        <h1>Zora Airdrop Checker</h1>
+  const renderContent = () => {
+    if (currentPage === 'multi') {
+      return <MultiWalletChecker />;
+    }
+
+    return (
+      <>
+        <h1>Zora Airdrop Claimer</h1>
         
         {!walletConnected ? (
           <button 
@@ -236,6 +240,35 @@ function App() {
             </div>
           </div>
         )}
+      </>
+    );
+  };
+
+  return (
+    <div className={`app-container ${isDarkMode ? 'dark-mode' : ''}`}>
+      <div className="theme-toggle">
+        <button onClick={toggleTheme}>
+          {isDarkMode ? '🌞' : '🌙'}
+        </button>
+      </div>
+
+      <nav className="navigation">
+        <button 
+          className={`nav-button ${currentPage === 'single' ? 'active' : ''}`}
+          onClick={() => setCurrentPage('single')}
+        >
+          Claim
+        </button>
+        <button 
+          className={`nav-button ${currentPage === 'multi' ? 'active' : ''}`}
+          onClick={() => setCurrentPage('multi')}
+        >
+          Multi Wallet Checker
+        </button>
+      </nav>
+      
+      <div className="content">
+        {renderContent()}
       </div>
 
       <div style={{
