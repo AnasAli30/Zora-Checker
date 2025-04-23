@@ -40,6 +40,9 @@ function App() {
                 blockExplorerUrls: ['https://basescan.org']
               }]
             })
+          } else if (switchError.message?.includes('not supported')) {
+            // If the wallet doesn't support switching chains, just continue with connection
+            console.log('Wallet does not support chain switching, continuing with connection...')
           } else {
             throw switchError
           }
@@ -53,38 +56,61 @@ function App() {
         setError('Please install MetaMask to connect your wallet')
       }
     } catch (err) {
-      setError('Failed to connect wallet: ' + err.message)
+      if (err.message?.includes('not supported')) {
+        setError('Please make sure you are connected to the Base network in your wallet')
+      } else {
+        setError('Failed to connect wallet: ' + err.message)
+      }
     }
   }
 
   const claimAirdrop = async () => {
     try {
-      if (!window.ethereum) {
-        setError('Please install MetaMask to claim')
-        return
+      if (!walletConnected) {
+        setError('Please connect your wallet first to claim the airdrop');
+        return;
       }
 
-      setLoading(true)
-      const provider = new ethers.BrowserProvider(window.ethereum)
-      const signer = await provider.getSigner()
+      if (!window.ethereum) {
+        setError('Please install MetaMask to claim');
+        return;
+      }
+
+      // Check if the entered address matches the connected wallet address
+      if (address.toLowerCase() !== walletAddress.toLowerCase()) {
+        setError('You can only claim the airdrop for your connected wallet address. Please connect the correct wallet or enter the correct address.');
+        return;
+      }
+
+      setLoading(true);
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
       
       const contract = new ethers.Contract(
         "0x0000000002ba96C69b95E32CAAB8fc38bAB8B3F8",
         [{"inputs":[{"internalType":"address","name":"_claimTo","type":"address"}],"name":"claim","outputs":[],"stateMutability":"nonpayable","type":"function"}],
         signer
-      )
+      );
 
-      const tx = await contract.claim(walletAddress)
-      await tx.wait()
-      
-      // Refresh eligibility after claiming
-      checkEligibility()
+      try {
+        const tx = await contract.claim(walletAddress);
+        await tx.wait();
+        
+        // Refresh eligibility after claiming
+        checkEligibility();
+      } catch (contractError) {
+        if (contractError.code === 'CALL_EXCEPTION') {
+          setError('You can only claim the airdrop for your connected wallet address. Please make sure you are connected with the correct wallet.');
+        } else {
+          throw contractError;
+        }
+      }
     } catch (err) {
-      setError('Failed to claim airdrop: ' + err.message)
+      setError('Failed to claim airdrop: ' + err.message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const checkEligibility = async () => {
     if (!address) {
