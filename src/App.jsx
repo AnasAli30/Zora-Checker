@@ -1,32 +1,105 @@
 import { useState, useEffect } from 'react'
 import { checkAirdropEligibility } from './utils/contract'
+import { ethers } from 'ethers'
+import './App.css'
 
 function App() {
   const [address, setAddress] = useState('')
-  const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
-  const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [walletConnected, setWalletConnected] = useState(false)
+  const [walletAddress, setWalletAddress] = useState('')
   const [isDarkMode, setIsDarkMode] = useState(false)
 
-  useEffect(() => {
-    // Check system preference for dark mode
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    setIsDarkMode(prefersDark)
-  }, [])
+  const connectWallet = async () => {
+    try {
+      if (window.ethereum) {
+        const provider = new ethers.BrowserProvider(window.ethereum)
+        
+        // Request to switch to Base network
+        try {
+          await window.ethereum.request({
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x2105' }], // Base mainnet chain ID
+          })
+        } catch (switchError) {
+          // If the network is not added to MetaMask, add it
+          if (switchError.code === 4902) {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: '0x2105',
+                chainName: 'Base',
+                nativeCurrency: {
+                  name: 'ETH',
+                  symbol: 'ETH',
+                  decimals: 18
+                },
+                rpcUrls: ['https://mainnet.base.org'],
+                blockExplorerUrls: ['https://basescan.org']
+              }]
+            })
+          } else {
+            throw switchError
+          }
+        }
 
-  const handleCheckAirdrop = async () => {
+        const accounts = await provider.send("eth_requestAccounts", [])
+        setWalletAddress(accounts[0])
+        setWalletConnected(true)
+        setAddress(accounts[0])
+      } else {
+        setError('Please install MetaMask to connect your wallet')
+      }
+    } catch (err) {
+      setError('Failed to connect wallet: ' + err.message)
+    }
+  }
+
+  const claimAirdrop = async () => {
+    try {
+      if (!window.ethereum) {
+        setError('Please install MetaMask to claim')
+        return
+      }
+
+      setLoading(true)
+      const provider = new ethers.BrowserProvider(window.ethereum)
+      const signer = await provider.getSigner()
+      
+      const contract = new ethers.Contract(
+        "0x0000000002ba96C69b95E32CAAB8fc38bAB8B3F8",
+        [{"inputs":[{"internalType":"address","name":"_claimTo","type":"address"}],"name":"claim","outputs":[],"stateMutability":"nonpayable","type":"function"}],
+        signer
+      )
+
+      const tx = await contract.claim(walletAddress)
+      await tx.wait()
+      
+      // Refresh eligibility after claiming
+      checkEligibility()
+    } catch (err) {
+      setError('Failed to claim airdrop: ' + err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const checkEligibility = async () => {
     if (!address) {
-      setError('Please enter a valid Ethereum address')
+      setError('Please enter a wallet address')
       return
     }
 
     setLoading(true)
-    setError(null)
+    setError('')
     try {
-      const eligibilityResult = await checkAirdropEligibility(address)
-      setResult(eligibilityResult)
-    } catch (error) {
-      setError(error.message)
+      const eligibility = await checkAirdropEligibility(address)
+      setResult(eligibility)
+    } catch (err) {
+      setError('Failed to check eligibility: ' + err.message)
+      setResult(null)
     } finally {
       setLoading(false)
     }
@@ -34,6 +107,7 @@ function App() {
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode)
+    document.body.classList.toggle('dark-mode')
   }
 
   const themeStyles = {
@@ -70,176 +144,70 @@ function App() {
   const currentTheme = isDarkMode ? themeStyles.dark : themeStyles.light
 
   return (
-    <div style={{ 
-      minHeight: '100vh',
-      minWidth: '100vw',
-      display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: currentTheme.background,
-      padding: '2rem 0',
-      color: currentTheme.text,
-      transition: 'all 0.3s ease'
-    }}>
-      <div style={{ 
-        maxWidth: '500px',
-        width: '100%',
-        padding: '0 1rem'
-      }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginBottom: '2rem'
-        }}>
-          <h1 style={{ 
-            textAlign: 'center',
-            color: currentTheme.text,
-            margin: 0
-          }}>
-            Zora Airdrop Checker
-          </h1>
-          <button
-            onClick={toggleTheme}
-            style={{
-              padding: '0.5rem',
-              backgroundColor: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              color: currentTheme.text
-            }}
+    <div className={`app-container ${isDarkMode ? 'dark-mode' : ''}`}>
+      <div className="theme-toggle">
+        <button onClick={toggleTheme}>
+          {isDarkMode ? '🌞' : '🌙'}
+        </button>
+      </div>
+      
+      <div className="content">
+        <h1>Zora Airdrop Checker</h1>
+        
+        {!walletConnected ? (
+          <button 
+            className="connect-button"
+            onClick={connectWallet}
           >
-            {isDarkMode ? '☀️' : '🌙'}
+            Connect Wallet
           </button>
-        </div>
-
-        <div style={{ 
-          backgroundColor: currentTheme.cardBg,
-          padding: '1.5rem',
-          borderRadius: '8px',
-          boxShadow: currentTheme.shadow
-        }}>
-          <div style={{ marginBottom: '1rem' }}>
-            <label style={{
-              display: 'block',
-              marginBottom: '0.5rem',
-              color: currentTheme.secondaryText,
-              textAlign: 'center'
-            }}>
-              Ethereum Address
-            </label>
-            <input
-              type="text"
-              placeholder="0x..."
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              style={{
-                width: '95%',
-                padding: '0.75rem',
-                border: `1px solid ${currentTheme.border}`,
-                borderRadius: '4px',
-                fontSize: '1rem',
-                textAlign: 'center',
-                backgroundColor: currentTheme.inputBg,
-                color: currentTheme.text
-              }}
-            />
+        ) : (
+          <div className="wallet-info">
+            <p>Connected: {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}</p>
           </div>
+        )}
 
-          <button
-            onClick={handleCheckAirdrop}
+        <div className="input-container">
+          <input
+            type="text"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="Enter wallet address"
+            disabled={walletConnected}
+          />
+          <button 
+            onClick={checkEligibility}
             disabled={loading}
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              backgroundColor: currentTheme.button,
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              fontSize: '1rem',
-              cursor: 'pointer'
-            }}
           >
             {loading ? 'Checking...' : 'Check Eligibility'}
           </button>
-
-          {error && (
-            <div style={{
-              marginTop: '1rem',
-              padding: '0.75rem',
-              backgroundColor: currentTheme.errorBg,
-              color: '#dc2626',
-              borderRadius: '4px',
-              fontSize: '0.875rem',
-              textAlign: 'center'
-            }}>
-              {error}
-            </div>
-          )}
         </div>
 
+        {error && <div className="error">{error}</div>}
+
         {result && (
-          <div style={{ 
-            marginTop: '1.5rem',
-            backgroundColor: currentTheme.cardBg,
-            padding: '1.5rem',
-            borderRadius: '8px',
-            boxShadow: currentTheme.shadow
-          }}>
-            <h2 style={{ 
-              textAlign: 'center',
-              marginBottom: '1rem',
-              color: result.eligible ? '#16a34a' : '#dc2626'
-            }}>
-              {result.eligible ? '🎉 Eligible!' : 'Not Eligible'}
-            </h2>
-
-            {result.eligible && (
-              <>
-                <div style={{ 
-                  textAlign: 'center',
-                  marginBottom: '1rem'
-                }}>
-                  <div style={{ 
-                    fontSize: '1.5rem',
-                    fontWeight: 'bold',
-                    color: currentTheme.button
-                  }}>
-                    {result.amount}
-                  </div>
-                  <div style={{ color: currentTheme.secondaryText }}>
-                    {result.token}
-                  </div>
-                </div>
-
-                <div style={{ 
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '0.5rem'
-                }}>
-                  <div style={{
-                    padding: '0.75rem',
-                    backgroundColor: result.claimed ? currentTheme.errorBg : currentTheme.successBg,
-                    borderRadius: '4px',
-                    color: result.claimed ? '#dc2626' : '#16a34a',
-                    textAlign: 'center'
-                  }}>
-                    {result.claimed ? "Already Claimed" : "Not Claimed Yet"}
-                  </div>
-
-                  <div style={{
-                    padding: '0.75rem',
-                    backgroundColor: result.claimOpen ? currentTheme.successBg : currentTheme.errorBg,
-                    borderRadius: '4px',
-                    color: result.claimOpen ? '#16a34a' : '#dc2626',
-                    textAlign: 'center'
-                  }}>
-                    {result.claimOpen ? "Claim Period Open" : "Claim Period Closed"}
-                  </div>
-                </div>
-              </>
-            )}
+          <div className="result-container">
+            <h2>Results</h2>
+            <div className="result-details">
+              <p>Eligible: {result.eligible ? '✅ Yes' : '❌ No'}</p>
+              {result.eligible && (
+                <>
+                  <p>Amount: {result.amount} {result.token}</p>
+                  <p>Claimed: {result.claimed ? '✅ Yes' : '❌ No'}</p>
+                  <p>Claim Open: {result.claimOpen ? '✅ Yes' : '❌ No'}</p>
+                  
+                  {result.eligible && !result.claimed && result.claimOpen && (
+                    <button 
+                      className="claim-button"
+                      onClick={claimAirdrop}
+                      disabled={loading}
+                    >
+                      {loading ? 'Claiming...' : 'Claim Airdrop'}
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         )}
       </div>
